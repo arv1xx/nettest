@@ -36,6 +36,12 @@
             data.ports.forEach(p => {
                 html += `<li>${p.port} (${p.name}): ${p.status}</li>`;
             });
+            html += `<p>DDoS тест: среднее время ${data.ddos.avg_response_ms}ms, ошибок: ${data.ddos.errors}</p>`;
+            html += '<h4>SQL инъекции:</h4><ul>';
+            data.sql.forEach(s => {
+                html += `<li>${s.payload}: ${s.status} - ${s.note}</li>`;
+            });
+            html += '</ul>';
             html += '</ul>';
             document.getElementById('results').innerHTML = html;
         }

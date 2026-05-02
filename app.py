@@ -3,6 +3,8 @@ from modules.ping import check_ping
 from modules.ports import check_ports
 from modules.ssl_check import check_ssl
 from modules.http_check import check_http
+from modules.ddos_check import check_ddos
+from modules.sql_check import check_sql
 
 app = Flask(__name__)
 
@@ -23,6 +25,8 @@ def scan():
     results['ports'] = check_ports(host)
     results['ssl'] = check_ssl(host)
     results['http'] = check_http(host)
+    results['ddos'] = check_ddos(host)
+    results['sql'] = check_sql(host)
     
     return jsonify(results)
 
