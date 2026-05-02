@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>NetTest</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>NetTest</h1>
+        <p>Инструмент сетевого тестирования</p>
+        <div class="input-row">
+            <input type="text" id="host" placeholder="example.com или IP" />
+            <button onclick="runScan()">Запустить ↗</button>
+        </div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        async function runScan() {
+            const host = document.getElementById('host').value;
+            document.getElementById('results').innerHTML = '<p>Проверяем...</p>';
+            
+            const res = await fetch('/scan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({host})
+            });
+            const data = await res.json();
+            
+            let html = `<h3>Результаты для: ${host}</h3>`;
+            html += `<p>Пинг: ${data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен'}</p>`;
+            html += `<p>HTTP статус: ${data.http.status_code || 'ошибка'}</p>`;
+            html += `<p>SSL: ${data.ssl.status === 'ok' ? 'валидный, истекает через ' + data.ssl.days_left + ' дней' : 'ошибка'}</p>`;
+            html += '<h4>Порты:</h4><ul>';
+            data.ports.forEach(p => {
+                html += `<li>${p.port} (${p.name}): ${p.status}</li>`;
+            });
+            html += '</ul>';
+            document.getElementById('results').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
