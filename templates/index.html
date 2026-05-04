@@ -2,49 +2,225 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetTest</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>NetTest</h1>
-        <p>Инструмент сетевого тестирования</p>
-        <div class="input-row">
-            <input type="text" id="host" placeholder="example.com или IP" />
-            <button onclick="runScan()">Запустить ↗</button>
-        </div>
-        <div id="results"></div>
-    </div>
+<div class="layout">
 
-    <script>
-        async function runScan() {
-            const host = document.getElementById('host').value;
-            document.getElementById('results').innerHTML = '<p>Проверяем...</p>';
-            
+    <!-- САЙДБАР -->
+    <aside class="sidebar">
+        <div class="logo">NetTest <span>v1.0</span></div>
+
+        <div class="card">
+            <div class="card-label">Цель</div>
+            <input type="text" id="host" placeholder="example.com или IP" />
+            <button onclick="runScan()" id="btn">Запустить ↗</button>
+        </div>
+
+        <div class="card">
+            <div class="card-label">Модули</div>
+            <label class="toggle-row">
+                <span>Пинг / задержка</span>
+                <input type="checkbox" checked id="m_ping"> 
+            </label>
+            <label class="toggle-row">
+                <span>Сканирование портов</span>
+                <input type="checkbox" checked id="m_ports">
+            </label>
+            <label class="toggle-row">
+                <span>SSL-сертификат</span>
+                <input type="checkbox" checked id="m_ssl">
+            </label>
+            <label class="toggle-row">
+                <span>HTTP-заголовки</span>
+                <input type="checkbox" checked id="m_http">
+            </label>
+            <label class="toggle-row">
+                <span>DDoS-устойчивость</span>
+                <input type="checkbox" checked id="m_ddos">
+            </label>
+            <label class="toggle-row">
+                <span>SQL-инъекции</span>
+                <input type="checkbox" checked id="m_sql">
+            </label>
+        </div>
+
+        <div class="card" id="history-card">
+            <div class="card-label">История</div>
+            <div id="history"></div>
+        </div>
+    </aside>
+
+    <!-- ОСНОВНАЯ ЧАСТЬ -->
+    <main class="main">
+
+        <div class="metrics" id="metrics" style="display:none">
+            <div class="metric-card">
+                <div class="metric-label">Пинг</div>
+                <div class="metric-val" id="m-ping">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Открытых портов</div>
+                <div class="metric-val" id="m-ports">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">SSL</div>
+                <div class="metric-val" id="m-ssl">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">HTTP статус</div>
+                <div class="metric-val" id="m-http">-</div>
+            </div>
+        </div>
+
+        <div class="card main-card" id="results-card">
+            <div class="results-header">
+                <span class="card-label" style="margin:0">Результаты</span>
+                <button class="btn-export" onclick="exportPDF()" style="display:none" id="export-btn">Экспорт PDF</button>
+            </div>
+            <div id="results">
+                <div class="placeholder">Введите хост и нажмите «Запустить»</div>
+            </div>
+        </div>
+
+        <div class="card log-card">
+            <div class="card-label">Лог</div>
+            <div id="log" class="log"></div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    function escape(str) {
+    if (str === null || str === undefined) return '-';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    const history_list = [];
+
+    function log(msg) {
+        const el = document.getElementById('log');
+        const time = new Date().toLocaleTimeString();
+        el.innerHTML += `<div><span class="log-time">[${time}]</span> ${msg}</div>`;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function badge(status) {
+        if (status === 'ok') return 'ok';
+        if (status === 'warn' || status === 'slow') return 'warn';
+        return 'err';
+    }
+
+    function row(label, value, status) {
+        return `<div class="result-row ${badge(status)}">
+            <div class="dot"></div>
+            <span class="row-label">${escape(label)}</span>
+            <span class="row-val">${escape(value)}</span>
+        </div>`;
+    }
+
+    async function runScan() {
+        const host = document.getElementById('host').value.trim();
+        if (!host) return;
+
+        document.getElementById('btn').textContent = 'Проверяем...';
+        document.getElementById('btn').disabled = true;
+        document.getElementById('results').innerHTML = '<div class="placeholder">Выполняется проверка...</div>';
+        document.getElementById('metrics').style.display = 'none';
+        document.getElementById('export-btn').style.display = 'none';
+        document.getElementById('log').innerHTML = '';
+
+        log(`Запуск проверки -> ${host}`);
+
+        try {
             const res = await fetch('/scan', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({host})
             });
             const data = await res.json();
-            
-            let html = `<h3>Результаты для: ${host}</h3>`;
-            html += `<p>Пинг: ${data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен'}</p>`;
-            html += `<p>HTTP статус: ${data.http.status_code || 'ошибка'}</p>`;
-            html += `<p>SSL: ${data.ssl.status === 'ok' ? 'валидный, истекает через ' + data.ssl.days_left + ' дней' : 'ошибка'}</p>`;
-            html += '<h4>Порты:</h4><ul>';
+
+            if (data.error) {
+                document.getElementById('results').innerHTML = `<div class="placeholder">${data.error}</div>`;
+                return;
+            }
+
+            // Метрики
+            document.getElementById('metrics').style.display = 'grid';
+            document.getElementById('m-ping').textContent = data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен';
+            const open_ports = data.ports.filter(p => p.status === 'open').length;
+            document.getElementById('m-ports').textContent = open_ports + ' / ' + data.ports.length;
+            document.getElementById('m-ssl').textContent = data.ssl.status === 'ok' ? 'Валидный' : 'Ошибка';
+            document.getElementById('m-ssl').style.color = data.ssl.status === 'ok' ? '#4caf7d' : '#e05c5c';
+            document.getElementById('m-http').textContent = data.http.status_code || 'ошибка';
+
+            // Результаты
+            let html = '';
+
+            html += '<div class="section-label">Сеть</div>';
+            log('Пинг... ' + (data.ping.time_ms || 'ошибка') + 'ms');
+            html += row('Пинг', data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен', data.ping.status);
+
+            log('Сканирование портов...');
             data.ports.forEach(p => {
-                html += `<li>${p.port} (${p.name}): ${p.status}</li>`;
+                html += row(`Порт ${p.port} (${p.name})`, p.status === 'open' ? 'открыт' : 'закрыт', p.status === 'open' ? 'ok' : 'err');
             });
-            html += `<p>DDoS тест: среднее время ${data.ddos.avg_response_ms}ms, ошибок: ${data.ddos.errors}</p>`;
-            html += '<h4>SQL инъекции:</h4><ul>';
+
+            html += '<div class="section-label">SSL и заголовки</div>';
+            log('Проверка SSL...');
+            html += row('SSL сертификат', data.ssl.status === 'ok' ? 'истекает через ' + data.ssl.days_left + ' дней' : 'ошибка', data.ssl.status);
+            log('Проверка HTTP заголовков...');
+            html += row('HTTP статус', data.http.status_code, data.http.status);
+            data.http.missing_headers.forEach(h => {
+                html += row(h.header, 'отсутствует - ' + h.desc, 'warn');
+            });
+
+            html += '<div class="section-label">DDoS-устойчивость</div>';
+            log('DDoS тест: отправка 20 запросов...');
+            html += row('Среднее время под нагрузкой', data.ddos.avg_response_ms + 'ms', data.ddos.status);
+            html += row('Успешных запросов', data.ddos.successful + ' / ' + data.ddos.requests_sent, data.ddos.errors > 5 ? 'warn' : 'ok');
+
+            html += '<div class="section-label">SQL-инъекции</div>';
+            log('SQL тест: проверка параметров...');
             data.sql.forEach(s => {
-                html += `<li>${s.payload}: ${s.status} - ${s.note}</li>`;
+                html += row(s.payload, s.note, s.status);
             });
-            html += '</ul>';
-            html += '</ul>';
+
+            log('Готово.');
             document.getElementById('results').innerHTML = html;
+            document.getElementById('export-btn').style.display = 'inline-block';
+
+            // История
+            history_list.unshift(host);
+            const hel = document.getElementById('history');
+            hel.innerHTML = history_list.slice(0, 5).map(h =>
+                `<div class="hist-item" onclick="document.getElementById('host').value='${h}'">${h}</div>`
+            ).join('');
+
+        } catch(e) {
+            document.getElementById('results').innerHTML = `<div class="placeholder">Ошибка: ${e.message}</div>`;
+            log('Ошибка: ' + e.message);
+        } finally {
+            document.getElementById('btn').textContent = 'Запустить ↗';
+            document.getElementById('btn').disabled = false;
         }
-    </script>
+    }
+
+    async function exportPDF() {
+        const host = document.getElementById('host').value.trim();
+        window.location.href = `/export?host=${host}`;
+    }
+
+    document.getElementById('host').addEventListener('keydown', e => {
+        if (e.key === 'Enter') runScan();
+    });
+</script>
 </body>
 </html>
