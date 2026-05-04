@@ -164,36 +164,57 @@
             // Результаты
             let html = '';
 
-            html += '<div class="section-label">Сеть</div>';
-            log('Пинг... ' + (data.ping.time_ms || 'ошибка') + 'ms');
-            html += row('Пинг', data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен', data.ping.status);
+            // СЕТЬ
+            if (document.getElementById('m_ping').checked) {
+                html += '<div class="section-label">Сеть</div>';
+                log('Пинг... ' + (data.ping.time_ms || 'ошибка') + 'ms');
+                html += row('Пинг', data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен', data.ping.status);
+            }
 
-            log('Сканирование портов...');
-            data.ports.forEach(p => {
-                html += row(`Порт ${p.port} (${p.name})`, p.status === 'open' ? 'открыт' : 'закрыт', p.status === 'open' ? 'ok' : 'err');
-            });
+            if (document.getElementById('m_ports').checked) {
+                if (!document.getElementById('m_ping').checked) html += '<div class="section-label">Сеть</div>';
+                log('Сканирование портов...');
+                data.ports.forEach(p => {
+                    html += row(`Порт ${p.port} (${p.name})`, p.status === 'open' ? 'открыт' : 'закрыт', p.status === 'open' ? 'ok' : 'err');
+                });
+            }
 
-            html += '<div class="section-label">SSL и заголовки</div>';
-            log('Проверка SSL...');
-            html += row('SSL сертификат', data.ssl.status === 'ok' ? 'истекает через ' + data.ssl.days_left + ' дней' : 'ошибка', data.ssl.status);
-            log('Проверка HTTP заголовков...');
-            html += row('HTTP статус', data.http.status_code, data.http.status);
-            data.http.missing_headers.forEach(h => {
-                html += row(h.header, 'отсутствует - ' + h.desc, 'warn');
-            });
+            // SSL И ЗАГОЛОВКИ
+            if (document.getElementById('m_ssl').checked || document.getElementById('m_http').checked) {
+                html += '<div class="section-label">SSL и заголовки</div>';
+                if (document.getElementById('m_ssl').checked) {
+                    log('Проверка SSL...');
+                    html += row('SSL сертификат', data.ssl.status === 'ok' ? 'истекает через ' + data.ssl.days_left + ' дней' : 'ошибка', data.ssl.status);
+                }
+                if (document.getElementById('m_http').checked) {
+                    log('Проверка HTTP заголовков...');
+                    html += row('HTTP статус', data.http.status_code, data.http.status);
+                    if (data.http.missing_headers) {
+                        data.http.missing_headers.forEach(h => {
+                            const name = h.header || h;
+                            const desc = h.desc || '';
+                            html += row(name, 'отсутствует - ' + desc, 'warn');
+                        });
+                    }
+                }
+            }
 
-            html += '<div class="section-label">DDoS-устойчивость</div>';
-            log('DDoS тест: отправка 20 запросов...');
-            html += row('Среднее время под нагрузкой', data.ddos.avg_response_ms + 'ms', data.ddos.status);
-            html += row('Успешных запросов', data.ddos.successful + ' / ' + data.ddos.requests_sent, data.ddos.errors > 5 ? 'warn' : 'ok');
+            // DDOS
+            if (document.getElementById('m_ddos').checked) {
+                html += '<div class="section-label">DDoS-устойчивость</div>';
+                log('DDoS тест: отправка 20 запросов...');
+                html += row('Среднее время под нагрузкой', (data.ddos.avg_response_ms || '-') + 'ms', data.ddos.status);
+                html += row('Успешных запросов', (data.ddos.successful || 0) + ' / ' + data.ddos.requests_sent, data.ddos.errors > 5 ? 'warn' : 'ok');
+            }
 
-            html += '<div class="section-label">SQL-инъекции</div>';
-            log('SQL тест: проверка параметров...');
-            data.sql.forEach(s => {
-                html += row(s.payload, s.note, s.status);
-            });
-
-            log('Готово.');
+            // SQL
+            if (document.getElementById('m_sql').checked) {
+                html += '<div class="section-label">SQL-инъекции</div>';
+                log('SQL тест: проверка параметров...');
+                data.sql.forEach(s => {
+                    html += row(escape(s.payload), s.note, s.status);
+                });
+            }
             document.getElementById('results').innerHTML = html;
             document.getElementById('export-btn').style.display = 'inline-block';
 
