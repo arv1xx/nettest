@@ -103,7 +103,86 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
-    const history_list = [];
+    let historyEntries = [];
+
+    async function loadHistory() {
+        try {
+            const res = await fetch('/history?limit=10');
+            historyEntries = await res.json();
+            renderHistory(historyEntries);
+        } catch(e) {}
+    }
+
+    function renderHistory(entries) {
+        document.getElementById('history').innerHTML = entries.map(e => {
+            const date = new Date(e.scanned_at).toLocaleDateString('ru-RU');
+            return `<div class="hist-item" onclick="showSavedScan(${e.id})"><span>${escape(e.host)}</span><span class="hist-date">${date}</span></div>`;
+        }).join('');
+    }
+
+    function showSavedScan(id) {
+        const entry = historyEntries.find(e => e.id === id);
+        if (!entry) return;
+        document.getElementById('host').value = entry.host;
+        document.getElementById('log').innerHTML = '';
+        document.getElementById('export-btn').style.display = 'none';
+        const scannedAt = new Date(entry.scanned_at).toLocaleString('ru-RU');
+        updateMetrics(entry.results);
+        document.getElementById('metrics').style.display = 'grid';
+        document.getElementById('results').innerHTML =
+            `<div class="scan-info">История · ${escape(entry.host)} · ${scannedAt}</div>` +
+            buildResultsHTML(entry.results);
+    }
+
+    function buildResultsHTML(data) {
+        let html = '';
+        const hasPing = data.ping && data.ping.status !== 'skip';
+        const hasPorts = data.ports && data.ports.length > 0;
+        if (hasPing || hasPorts) {
+            html += '<div class="section-label">Сеть</div>';
+            if (hasPing)
+                html += row('Пинг', data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен', data.ping.status);
+            if (hasPorts)
+                data.ports.forEach(p => {
+                    html += row(`Порт ${p.port} (${p.name})`, p.status === 'open' ? 'открыт' : 'закрыт', p.status === 'open' ? 'ok' : 'err');
+                });
+        }
+        const hasSsl = data.ssl && data.ssl.status !== 'skip';
+        const hasHttp = data.http && data.http.status !== 'skip';
+        if (hasSsl || hasHttp) {
+            html += '<div class="section-label">SSL и заголовки</div>';
+            if (hasSsl)
+                html += row('SSL сертификат', data.ssl.status === 'ok' ? 'истекает через ' + data.ssl.days_left + ' дней' : 'ошибка', data.ssl.status);
+            if (hasHttp) {
+                html += row('HTTP статус', data.http.status_code, data.http.status);
+                if (data.http.missing_headers)
+                    data.http.missing_headers.forEach(h => {
+                        const name = h.header || h;
+                        const desc = h.desc || '';
+                        html += row(name, 'отсутствует' + (desc ? ' - ' + desc : ''), 'warn');
+                    });
+            }
+        }
+        if (data.ddos && data.ddos.status !== 'skip') {
+            html += '<div class="section-label">DDoS-устойчивость</div>';
+            html += row('Среднее время под нагрузкой', (data.ddos.avg_response_ms || '-') + 'ms', data.ddos.status);
+            html += row('Успешных запросов', (data.ddos.successful || 0) + ' / ' + data.ddos.requests_sent, data.ddos.errors > 5 ? 'warn' : 'ok');
+        }
+        if (data.sql && data.sql.length > 0) {
+            html += '<div class="section-label">SQL-инъекции</div>';
+            data.sql.forEach(s => html += row(escape(s.payload), s.note, s.status));
+        }
+        return html;
+    }
+
+    function updateMetrics(data) {
+        document.getElementById('m-ping').textContent = data.ping && data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен';
+        const open_ports = data.ports ? data.ports.filter(p => p.status === 'open').length : 0;
+        document.getElementById('m-ports').textContent = open_ports + ' / ' + (data.ports ? data.ports.length : 0);
+        document.getElementById('m-ssl').textContent = data.ssl && data.ssl.status === 'ok' ? 'Валидный' : 'Ошибка';
+        document.getElementById('m-ssl').style.color = data.ssl && data.ssl.status === 'ok' ? '#4caf7d' : '#e05c5c';
+        document.getElementById('m-http').textContent = (data.http && data.http.status_code) || 'ошибка';
+    }
 
     function log(msg) {
         const el = document.getElementById('log');
@@ -152,78 +231,20 @@
                 return;
             }
 
-            // Метрики
+            updateMetrics(data);
             document.getElementById('metrics').style.display = 'grid';
-            document.getElementById('m-ping').textContent = data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен';
-            const open_ports = data.ports.filter(p => p.status === 'open').length;
-            document.getElementById('m-ports').textContent = open_ports + ' / ' + data.ports.length;
-            document.getElementById('m-ssl').textContent = data.ssl.status === 'ok' ? 'Валидный' : 'Ошибка';
-            document.getElementById('m-ssl').style.color = data.ssl.status === 'ok' ? '#4caf7d' : '#e05c5c';
-            document.getElementById('m-http').textContent = data.http.status_code || 'ошибка';
 
-            // Результаты
-            let html = '';
+            if (data.ping.status !== 'skip') log('Пинг... ' + (data.ping.time_ms || 'ошибка') + 'ms');
+            if (data.ports.length > 0) log('Сканирование портов...');
+            if (data.ssl.status !== 'skip') log('Проверка SSL...');
+            if (data.http.status !== 'skip') log('Проверка HTTP заголовков...');
+            if (data.ddos.status !== 'skip') log('DDoS тест: отправка 20 запросов...');
+            if (data.sql.length > 0) log('SQL тест: проверка параметров...');
 
-            // СЕТЬ
-            if (document.getElementById('m_ping').checked) {
-                html += '<div class="section-label">Сеть</div>';
-                log('Пинг... ' + (data.ping.time_ms || 'ошибка') + 'ms');
-                html += row('Пинг', data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен', data.ping.status);
-            }
-
-            if (document.getElementById('m_ports').checked) {
-                if (!document.getElementById('m_ping').checked) html += '<div class="section-label">Сеть</div>';
-                log('Сканирование портов...');
-                data.ports.forEach(p => {
-                    html += row(`Порт ${p.port} (${p.name})`, p.status === 'open' ? 'открыт' : 'закрыт', p.status === 'open' ? 'ok' : 'err');
-                });
-            }
-
-            // SSL И ЗАГОЛОВКИ
-            if (document.getElementById('m_ssl').checked || document.getElementById('m_http').checked) {
-                html += '<div class="section-label">SSL и заголовки</div>';
-                if (document.getElementById('m_ssl').checked) {
-                    log('Проверка SSL...');
-                    html += row('SSL сертификат', data.ssl.status === 'ok' ? 'истекает через ' + data.ssl.days_left + ' дней' : 'ошибка', data.ssl.status);
-                }
-                if (document.getElementById('m_http').checked) {
-                    log('Проверка HTTP заголовков...');
-                    html += row('HTTP статус', data.http.status_code, data.http.status);
-                    if (data.http.missing_headers) {
-                        data.http.missing_headers.forEach(h => {
-                            const name = h.header || h;
-                            const desc = h.desc || '';
-                            html += row(name, 'отсутствует - ' + desc, 'warn');
-                        });
-                    }
-                }
-            }
-
-            // DDOS
-            if (document.getElementById('m_ddos').checked) {
-                html += '<div class="section-label">DDoS-устойчивость</div>';
-                log('DDoS тест: отправка 20 запросов...');
-                html += row('Среднее время под нагрузкой', (data.ddos.avg_response_ms || '-') + 'ms', data.ddos.status);
-                html += row('Успешных запросов', (data.ddos.successful || 0) + ' / ' + data.ddos.requests_sent, data.ddos.errors > 5 ? 'warn' : 'ok');
-            }
-
-            // SQL
-            if (document.getElementById('m_sql').checked) {
-                html += '<div class="section-label">SQL-инъекции</div>';
-                log('SQL тест: проверка параметров...');
-                data.sql.forEach(s => {
-                    html += row(escape(s.payload), s.note, s.status);
-                });
-            }
-            document.getElementById('results').innerHTML = html;
+            document.getElementById('results').innerHTML = buildResultsHTML(data);
             document.getElementById('export-btn').style.display = 'inline-block';
 
-            // История
-            history_list.unshift(host);
-            const hel = document.getElementById('history');
-            hel.innerHTML = history_list.slice(0, 5).map(h =>
-                `<div class="hist-item" onclick="document.getElementById('host').value='${h}'">${h}</div>`
-            ).join('');
+            loadHistory();
 
         } catch(e) {
             document.getElementById('results').innerHTML = `<div class="placeholder">Ошибка: ${e.message}</div>`;
@@ -242,6 +263,8 @@
     document.getElementById('host').addEventListener('keydown', e => {
         if (e.key === 'Enter') runScan();
     });
+
+    loadHistory();
 </script>
 </body>
 </html>
