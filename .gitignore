@@ -4,3 +4,4 @@ __pycache__/
 *.pyo
 database.db
 *.db
+CLAUDE.md
