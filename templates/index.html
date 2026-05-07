@@ -120,8 +120,19 @@
     function renderHistory(entries) {
         document.getElementById('history').innerHTML = entries.map(e => {
             const date = new Date(e.scanned_at).toLocaleDateString('ru-RU');
-            return `<div class="hist-item" onclick="showSavedScan(${e.id})"><span>${escape(e.host)}</span><span class="hist-date">${date}</span></div>`;
+            return `<div class="hist-item" onclick="showSavedScan(${e.id})">
+                <span>${escape(e.host)}</span>
+                <span class="hist-date">${date}</span>
+                <button class="btn-repeat" title="Повторить скан" onclick="event.stopPropagation();repeatScan(${e.id})">↺</button>
+            </div>`;
         }).join('');
+    }
+
+    function repeatScan(id) {
+        const entry = historyEntries.find(e => e.id === id);
+        if (!entry) return;
+        document.getElementById('host').value = entry.host;
+        runScan();
     }
 
     function showSavedScan(id) {

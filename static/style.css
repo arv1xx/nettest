@@ -113,6 +113,20 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 .hist-item:hover { color: #4f8ef7; }
 .hist-date { font-size: 10px; color: #444; flex-shrink: 0; margin-left: 6px; }
 
+.btn-repeat {
+    width: auto;
+    padding: 1px 6px;
+    font-size: 13px;
+    background: transparent;
+    color: #4f8ef7;
+    border: 1px solid #2a3a5a;
+    border-radius: 5px;
+    flex-shrink: 0;
+    margin-left: 6px;
+    line-height: 1.6;
+}
+.btn-repeat:hover { background: #1a2a4a; }
+
 .scan-info {
     font-size: 11px;
     color: #555;
