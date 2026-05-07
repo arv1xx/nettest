@@ -73,6 +73,10 @@
                 <div class="metric-label">HTTP статус</div>
                 <div class="metric-val" id="m-http">-</div>
             </div>
+            <div class="metric-card">
+                <div class="metric-label">Security Score</div>
+                <div class="metric-val" id="m-score">-</div>
+            </div>
         </div>
 
         <div class="card main-card" id="results-card">
@@ -136,6 +140,22 @@
 
     function buildResultsHTML(data) {
         let html = '';
+
+        const score = calculateScore(data);
+        if (score !== null) {
+            const color = scoreColor(score);
+            const label = score >= 80 ? 'Хорошая защита' : score >= 60 ? 'Средняя защита' : 'Слабая защита';
+            html += `<div class="score-banner">
+                <div class="score-banner-val" style="color:${color}">${score}</div>
+                <div class="score-banner-info">
+                    <div class="score-banner-label">Security Score — ${label}</div>
+                    <div class="score-bar-bg">
+                        <div class="score-bar-fill" style="width:${score}%;background:${color}"></div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
         const hasPing = data.ping && data.ping.status !== 'skip';
         const hasPorts = data.ports && data.ports.length > 0;
         if (hasPing || hasPorts) {
@@ -175,6 +195,50 @@
         return html;
     }
 
+    function calculateScore(data) {
+        let earned = 0;
+        let possible = 0;
+
+        if (data.ssl && data.ssl.status !== 'skip') {
+            possible += 25;
+            if (data.ssl.status === 'ok') earned += 25;
+        }
+
+        if (data.ports && data.ports.length > 0) {
+            const p21 = data.ports.find(p => p.port === 21);
+            const p22 = data.ports.find(p => p.port === 22);
+            if (p21) { possible += 10; if (p21.status !== 'open') earned += 10; }
+            if (p22) { possible += 10; if (p22.status !== 'open') earned += 10; }
+        }
+
+        if (data.http && data.http.status !== 'skip' && data.http.status !== 'error') {
+            possible += 20;
+            const missing = data.http.missing_headers || [];
+            if (!missing.includes('Strict-Transport-Security')) earned += 10;
+            if (!missing.includes('Content-Security-Policy')) earned += 10;
+        }
+
+        if (data.sql && data.sql.length > 0) {
+            possible += 20;
+            if (!data.sql.some(s => s.status === 'vulnerable')) earned += 20;
+        }
+
+        if (data.ddos && data.ddos.status !== 'skip') {
+            possible += 15;
+            if (data.ddos.status === 'ok') earned += 15;
+            else if (data.ddos.status === 'warn') earned += 7;
+        }
+
+        if (possible === 0) return null;
+        return Math.round((earned / possible) * 100);
+    }
+
+    function scoreColor(score) {
+        if (score >= 80) return '#4caf7d';
+        if (score >= 60) return '#d4a017';
+        return '#e05c5c';
+    }
+
     function updateMetrics(data) {
         const pingEl = document.getElementById('m-ping');
         if (!data.ping || data.ping.status === 'skip')
@@ -202,6 +266,16 @@
             httpEl.textContent = '-';
         else
             httpEl.textContent = data.http.status_code || 'ошибка';
+
+        const scoreEl = document.getElementById('m-score');
+        const score = calculateScore(data);
+        if (score === null) {
+            scoreEl.textContent = '-';
+            scoreEl.style.color = '';
+        } else {
+            scoreEl.textContent = score + ' / 100';
+            scoreEl.style.color = scoreColor(score);
+        }
     }
 
     function log(msg) {
