@@ -176,12 +176,32 @@
     }
 
     function updateMetrics(data) {
-        document.getElementById('m-ping').textContent = data.ping && data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен';
-        const open_ports = data.ports ? data.ports.filter(p => p.status === 'open').length : 0;
-        document.getElementById('m-ports').textContent = open_ports + ' / ' + (data.ports ? data.ports.length : 0);
-        document.getElementById('m-ssl').textContent = data.ssl && data.ssl.status === 'ok' ? 'Валидный' : 'Ошибка';
-        document.getElementById('m-ssl').style.color = data.ssl && data.ssl.status === 'ok' ? '#4caf7d' : '#e05c5c';
-        document.getElementById('m-http').textContent = (data.http && data.http.status_code) || 'ошибка';
+        const pingEl = document.getElementById('m-ping');
+        if (!data.ping || data.ping.status === 'skip')
+            pingEl.textContent = '-';
+        else
+            pingEl.textContent = data.ping.status === 'ok' ? data.ping.time_ms + 'ms' : 'недоступен';
+
+        const portsEl = document.getElementById('m-ports');
+        if (!data.ports || data.ports.length === 0)
+            portsEl.textContent = '-';
+        else
+            portsEl.textContent = data.ports.filter(p => p.status === 'open').length + ' / ' + data.ports.length;
+
+        const sslEl = document.getElementById('m-ssl');
+        if (!data.ssl || data.ssl.status === 'skip') {
+            sslEl.textContent = '-';
+            sslEl.style.color = '';
+        } else {
+            sslEl.textContent = data.ssl.status === 'ok' ? 'Действителен' : 'Ошибка';
+            sslEl.style.color = data.ssl.status === 'ok' ? '#4caf7d' : '#e05c5c';
+        }
+
+        const httpEl = document.getElementById('m-http');
+        if (!data.http || data.http.status === 'skip')
+            httpEl.textContent = '-';
+        else
+            httpEl.textContent = data.http.status_code || 'ошибка';
     }
 
     function log(msg) {
@@ -218,11 +238,20 @@
 
         log(`Запуск проверки -> ${host}`);
 
+        const modules = {
+            ping:  document.getElementById('m_ping').checked,
+            ports: document.getElementById('m_ports').checked,
+            ssl:   document.getElementById('m_ssl').checked,
+            http:  document.getElementById('m_http').checked,
+            ddos:  document.getElementById('m_ddos').checked,
+            sql:   document.getElementById('m_sql').checked,
+        };
+
         try {
             const res = await fetch('/scan', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({host})
+                body: JSON.stringify({host, modules})
             });
             const data = await res.json();
 
