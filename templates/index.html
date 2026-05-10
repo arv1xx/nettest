@@ -122,6 +122,7 @@
     }
     let historyEntries = [];
     let selectedForCompare = [];
+    let currentScanData = null;
 
     async function loadHistory() {
         try {
@@ -264,9 +265,10 @@
     function showSavedScan(id) {
         const entry = historyEntries.find(e => e.id === id);
         if (!entry) return;
+        currentScanData = { host: entry.host, results: entry.results, scanned_at: entry.scanned_at };
         document.getElementById('host').value = entry.host;
         document.getElementById('log').innerHTML = '';
-        document.getElementById('export-btn').style.display = 'none';
+        document.getElementById('export-btn').style.display = 'inline-block';
         const scannedAt = new Date(entry.scanned_at).toLocaleString('ru-RU');
         updateMetrics(entry.results);
         document.getElementById('metrics').style.display = 'grid';
@@ -471,6 +473,7 @@
                 return;
             }
 
+            currentScanData = { host, results: data, scanned_at: new Date().toISOString() };
             updateMetrics(data);
             document.getElementById('metrics').style.display = 'grid';
 
@@ -496,8 +499,26 @@
     }
 
     async function exportPDF() {
-        const host = document.getElementById('host').value.trim();
-        window.location.href = `/export?host=${host}`;
+        if (!currentScanData) return;
+        try {
+            const res = await fetch('/export-pdf', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(currentScanData)
+            });
+            if (!res.ok) { log('Ошибка экспорта PDF'); return; }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `nettest_${currentScanData.host}_${new Date().toISOString().slice(0,10)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch(e) {
+            log('Ошибка экспорта: ' + e.message);
+        }
     }
 
     document.getElementById('host').addEventListener('keydown', e => {
