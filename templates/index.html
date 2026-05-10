@@ -48,7 +48,10 @@
         </div>
 
         <div class="card" id="history-card">
-            <div class="card-label">История</div>
+            <div class="history-header">
+                <div class="card-label" style="margin:0">История</div>
+                <button id="btn-compare" class="btn-compare" style="display:none" onclick="showComparison()">Сравнить</button>
+            </div>
             <div id="history"></div>
         </div>
     </aside>
@@ -97,6 +100,16 @@
     </main>
 </div>
 
+<div id="compare-overlay" onclick="closeCompare()">
+    <div id="compare-modal" onclick="event.stopPropagation()">
+        <div class="compare-header">
+            <span class="card-label" style="margin:0">Сравнение сканов</span>
+            <button class="btn-close-compare" onclick="closeCompare()">✕</button>
+        </div>
+        <div id="compare-body"></div>
+    </div>
+</div>
+
 <script>
     function escape(str) {
     if (str === null || str === undefined) return '-';
@@ -108,6 +121,7 @@
         .replace(/'/g, '&#39;');
     }
     let historyEntries = [];
+    let selectedForCompare = [];
 
     async function loadHistory() {
         try {
@@ -120,12 +134,124 @@
     function renderHistory(entries) {
         document.getElementById('history').innerHTML = entries.map(e => {
             const date = new Date(e.scanned_at).toLocaleDateString('ru-RU');
+            const checked = selectedForCompare.includes(e.id) ? 'checked' : '';
             return `<div class="hist-item" onclick="showSavedScan(${e.id})">
+                <input type="checkbox" class="hist-check" ${checked}
+                    onclick="event.stopPropagation();toggleCompareSelection(${e.id},this)"
+                    title="Выбрать для сравнения">
                 <span>${escape(e.host)}</span>
                 <span class="hist-date">${date}</span>
                 <button class="btn-repeat" title="Повторить скан" onclick="event.stopPropagation();repeatScan(${e.id})">↺</button>
             </div>`;
         }).join('');
+        document.getElementById('btn-compare').style.display =
+            selectedForCompare.length === 2 ? 'inline-block' : 'none';
+    }
+
+    function toggleCompareSelection(id, checkbox) {
+        const idx = selectedForCompare.indexOf(id);
+        if (idx >= 0) {
+            selectedForCompare.splice(idx, 1);
+        } else if (selectedForCompare.length < 2) {
+            selectedForCompare.push(id);
+        } else {
+            checkbox.checked = false;
+            return;
+        }
+        document.getElementById('btn-compare').style.display =
+            selectedForCompare.length === 2 ? 'inline-block' : 'none';
+    }
+
+    function showComparison() {
+        const a = historyEntries.find(e => e.id === selectedForCompare[0]);
+        const b = historyEntries.find(e => e.id === selectedForCompare[1]);
+        if (!a || !b) return;
+        document.getElementById('compare-body').innerHTML = buildCompareTable(a, b);
+        document.getElementById('compare-overlay').style.display = 'flex';
+    }
+
+    function closeCompare() {
+        document.getElementById('compare-overlay').style.display = 'none';
+    }
+
+    function cmpRow(label, valA, valB, numA, numB, dir) {
+        let classA = '', classB = '';
+        if (dir !== 'none' && numA !== null && numB !== null && numA !== numB) {
+            const aBetter = dir === 'higher' ? numA > numB : numA < numB;
+            classA = aBetter ? 'cmp-better' : 'cmp-worse';
+            classB = aBetter ? 'cmp-worse' : 'cmp-better';
+        }
+        return `<tr>
+            <td class="cmp-label">${label}</td>
+            <td class="${classA}">${escape(valA)}</td>
+            <td class="${classB}">${escape(valB)}</td>
+        </tr>`;
+    }
+
+    function buildCompareTable(a, b) {
+        const da = a.results, db = b.results;
+        const scoreA = calculateScore(da), scoreB = calculateScore(db);
+        const rows = [];
+
+        rows.push(cmpRow('Security Score',
+            scoreA !== null ? scoreA + ' / 100' : '—',
+            scoreB !== null ? scoreB + ' / 100' : '—',
+            scoreA, scoreB, 'higher'));
+
+        const pingA = da.ping && da.ping.status === 'ok' ? da.ping.time_ms : null;
+        const pingB = db.ping && db.ping.status === 'ok' ? db.ping.time_ms : null;
+        rows.push(cmpRow('Пинг',
+            da.ping && da.ping.status !== 'skip' ? (da.ping.status === 'ok' ? da.ping.time_ms + 'ms' : 'недоступен') : '—',
+            db.ping && db.ping.status !== 'skip' ? (db.ping.status === 'ok' ? db.ping.time_ms + 'ms' : 'недоступен') : '—',
+            pingA, pingB, 'lower'));
+
+        const openA = da.ports ? da.ports.filter(p => p.status === 'open').length : null;
+        const openB = db.ports ? db.ports.filter(p => p.status === 'open').length : null;
+        rows.push(cmpRow('Открытых портов',
+            da.ports && da.ports.length > 0 ? openA + ' / ' + da.ports.length : '—',
+            db.ports && db.ports.length > 0 ? openB + ' / ' + db.ports.length : '—',
+            null, null, 'none'));
+
+        const sslNumA = da.ssl && da.ssl.status !== 'skip' ? (da.ssl.status === 'ok' ? 1 : 0) : null;
+        const sslNumB = db.ssl && db.ssl.status !== 'skip' ? (db.ssl.status === 'ok' ? 1 : 0) : null;
+        rows.push(cmpRow('SSL сертификат',
+            da.ssl && da.ssl.status !== 'skip' ? (da.ssl.status === 'ok' ? 'Действителен (' + (da.ssl.days_left || '?') + ' д.)' : 'Ошибка') : '—',
+            db.ssl && db.ssl.status !== 'skip' ? (db.ssl.status === 'ok' ? 'Действителен (' + (db.ssl.days_left || '?') + ' д.)' : 'Ошибка') : '—',
+            sslNumA, sslNumB, 'higher'));
+
+        rows.push(cmpRow('HTTP статус',
+            da.http && da.http.status !== 'skip' ? (da.http.status_code || 'ошибка') : '—',
+            db.http && db.http.status !== 'skip' ? (db.http.status_code || 'ошибка') : '—',
+            null, null, 'none'));
+
+        const ddosA = da.ddos && da.ddos.status !== 'skip' && typeof da.ddos.avg_response_ms === 'number' ? da.ddos.avg_response_ms : null;
+        const ddosB = db.ddos && db.ddos.status !== 'skip' && typeof db.ddos.avg_response_ms === 'number' ? db.ddos.avg_response_ms : null;
+        rows.push(cmpRow('DDoS — среднее время',
+            da.ddos && da.ddos.status !== 'skip' ? (da.ddos.avg_response_ms || '-') + 'ms' : '—',
+            db.ddos && db.ddos.status !== 'skip' ? (db.ddos.avg_response_ms || '-') + 'ms' : '—',
+            ddosA, ddosB, 'lower'));
+
+        const sqlVulnA = da.sql && da.sql.length > 0 ? da.sql.filter(s => s.status === 'vulnerable').length : null;
+        const sqlVulnB = db.sql && db.sql.length > 0 ? db.sql.filter(s => s.status === 'vulnerable').length : null;
+        rows.push(cmpRow('SQL уязвимости',
+            sqlVulnA !== null ? sqlVulnA + ' найдено' : '—',
+            sqlVulnB !== null ? sqlVulnB + ' найдено' : '—',
+            sqlVulnA !== null ? -sqlVulnA : null,
+            sqlVulnB !== null ? -sqlVulnB : null,
+            'higher'));
+
+        const dateA = new Date(a.scanned_at).toLocaleString('ru-RU');
+        const dateB = new Date(b.scanned_at).toLocaleString('ru-RU');
+        return `<table class="cmp-table">
+            <thead>
+                <tr>
+                    <th>Параметр</th>
+                    <th>${escape(a.host)}<br><small>${dateA}</small></th>
+                    <th>${escape(b.host)}<br><small>${dateB}</small></th>
+                </tr>
+            </thead>
+            <tbody>${rows.join('')}</tbody>
+        </table>`;
     }
 
     function repeatScan(id) {
