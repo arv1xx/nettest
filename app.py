@@ -117,6 +117,64 @@ def _pdf_score(results):
     return round(earned / possible * 100) if possible else None
 
 
+def _build_recommendations(results):
+    recs = []
+
+    ssl = results.get('ssl', {})
+    if ssl.get('status') == 'ok':
+        try:
+            if int(ssl.get('days_left', 999)) <= 30:
+                recs.append(
+                    f"SSL-сертификат истекает через {ssl['days_left']} дн. — "
+                    "обновите его как можно скорее."
+                )
+        except (TypeError, ValueError):
+            pass
+
+    for p in results.get('ports', []):
+        if p.get('status') == 'open':
+            if p.get('port') == 21:
+                recs.append(
+                    'Порт 21 (FTP) открыт — закройте FTP или замените его на SFTP.'
+                )
+            elif p.get('port') == 22:
+                recs.append(
+                    'Порт 22 (SSH) открыт — ограничьте доступ по IP через firewall '
+                    'или смените стандартный порт.'
+                )
+
+    http = results.get('http', {})
+    if http.get('status') not in ('skip', None):
+        missing = [h['header'] if isinstance(h, dict) else h
+                   for h in (http.get('missing_headers') or [])]
+        if 'Strict-Transport-Security' in missing:
+            recs.append(
+                'Отсутствует заголовок Strict-Transport-Security (HSTS) — '
+                'добавьте его для защиты от HTTP-downgrade-атак.'
+            )
+        if 'Content-Security-Policy' in missing:
+            recs.append(
+                'Отсутствует заголовок Content-Security-Policy (CSP) — '
+                'добавьте его для снижения риска XSS-атак.'
+            )
+
+    if any(s.get('status') == 'vulnerable' for s in results.get('sql', [])):
+        recs.append(
+            'Обнаружены SQL-инъекции — санируйте входные данные '
+            'и используйте параметризованные запросы.'
+        )
+
+    ddos = results.get('ddos', {})
+    if ddos.get('status') == 'warn':
+        avg = ddos.get('avg_response_ms', '—')
+        recs.append(
+            f'Высокое время ответа под нагрузкой ({avg} ms) — '
+            'рассмотрите кэширование или оптимизацию сервера.'
+        )
+
+    return recs
+
+
 def build_pdf(host, scanned_at, results):
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
@@ -305,6 +363,45 @@ def build_pdf(host, scanned_at, results):
         tbl = Table(rows, colWidths=[305, 177])
         tbl.setStyle(TableStyle(ts))
         story.append(tbl)
+
+    # Рекомендации
+    story.append(Spacer(1, 22))
+    story.append(HRFlowable(width='100%', thickness=0.5,
+                             color=colors.HexColor('#e5e7eb')))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(
+        'Рекомендации',
+        S('rechdr', fontName=_PDF_BOLD, fontSize=11, spaceAfter=8),
+    ))
+
+    recs = _build_recommendations(results)
+    if recs:
+        WARN_BG  = colors.HexColor('#fffbeb')
+        WARN_FG  = colors.HexColor('#92400e')
+        WARN_SEP = colors.HexColor('#fde68a')
+        s_num  = S('rn', fontName=_PDF_BOLD, fontSize=9, textColor=WARN_FG)
+        s_text = S('rt', fontName=_PDF_FONT, fontSize=9, textColor=WARN_FG, leading=14)
+        rec_rows = [
+            [Paragraph(f'{i + 1}.', s_num), Paragraph(text, s_text)]
+            for i, text in enumerate(recs)
+        ]
+        rec_tbl = Table(rec_rows, colWidths=[28, 454])
+        rec_tbl.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), WARN_BG),
+            ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING',    (0, 0), (-1, -1), 7),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING',  (0, 0), (0, -1), 2),
+            ('LINEBELOW',     (0, 0), (-1, -2), 0.5, WARN_SEP),
+        ]))
+        story.append(rec_tbl)
+    else:
+        story.append(Paragraph(
+            'Критических проблем не обнаружено.',
+            S('recok', textColor=colors.HexColor('#16a34a'), fontSize=10),
+        ))
 
     # Footer
     story.append(Spacer(1, 18))
