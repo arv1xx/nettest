@@ -11,7 +11,10 @@
 
     <!-- САЙДБАР -->
     <aside class="sidebar">
-        <div class="logo">NetTest <span>v1.0</span></div>
+        <div class="logo">
+            <span>NetTest <span class="logo-ver">v1.0</span></span>
+            <button id="btn-theme" class="btn-theme" onclick="toggleTheme()" title="Переключить тему">☀</button>
+        </div>
 
         <div class="card">
             <div class="card-label">Цель</div>
@@ -111,6 +114,21 @@
 </div>
 
 <script>
+    function initTheme() {
+        applyTheme(localStorage.getItem('nettest-theme') || 'dark');
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('btn-theme').textContent = theme === 'dark' ? '☀' : '🌙';
+        localStorage.setItem('nettest-theme', theme);
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+    }
+
     function escape(str) {
     if (str === null || str === undefined) return '-';
     return String(str)
@@ -525,6 +543,7 @@
         if (e.key === 'Enter') runScan();
     });
 
+    initTheme();
     loadHistory();
 </script>
 </body>
