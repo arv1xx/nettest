@@ -389,6 +389,23 @@ button:disabled { background: var(--btn-disabled); cursor: not-allowed; }
     margin-bottom: 10px;
 }
 
+.history-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.btn-csv {
+    width: auto;
+    padding: 5px 10px;
+    font-size: 12px;
+    background: var(--btn-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+.btn-csv:hover { background: var(--btn-secondary-hov); }
+
 .btn-compare {
     width: auto;
     padding: 5px 14px;

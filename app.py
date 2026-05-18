@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, Response
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from modules.ping import check_ping
@@ -11,7 +11,8 @@ from datetime import datetime
 import json
 import os
 import re
-from io import BytesIO
+import csv
+from io import BytesIO, StringIO
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
@@ -499,6 +500,66 @@ def export_pdf():
     filename  = f"nettest_{safe_host}_{datetime.now().strftime('%Y%m%d')}.pdf"
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=True, download_name=filename)
+
+@app.route('/export-csv')
+def export_csv():
+    entries = ScanHistory.query.order_by(ScanHistory.scanned_at.desc()).all()
+
+    buf = StringIO()
+    buf.write('﻿')  # UTF-8 BOM — для корректного открытия в Excel
+    writer = csv.writer(buf)
+    writer.writerow(['Хост', 'Дата', 'Security Score', 'Пинг (ms)',
+                     'Открытые порты', 'SSL', 'HTTP статус'])
+
+    for entry in entries:
+        results = json.loads(entry.results)
+
+        score = _pdf_score(results)
+        score_str = f'{score}/100' if score is not None else '—'
+
+        ping = results.get('ping', {})
+        if ping.get('status') == 'ok':
+            ping_str = str(ping.get('time_ms', '—'))
+        elif ping.get('status') == 'skip':
+            ping_str = '—'
+        else:
+            ping_str = 'недоступен'
+
+        ports = results.get('ports', [])
+        open_ports = [str(p['port']) for p in ports if p.get('status') == 'open']
+        ports_str = ', '.join(open_ports) if open_ports else 'нет'
+
+        ssl = results.get('ssl', {})
+        if ssl.get('status') == 'skip':
+            ssl_str = '—'
+        elif ssl.get('status') == 'ok':
+            ssl_str = f"действителен ({ssl.get('days_left', '?')} дн.)"
+        else:
+            ssl_str = 'ошибка'
+
+        http = results.get('http', {})
+        if http.get('status') == 'skip':
+            http_str = '—'
+        else:
+            http_str = str(http.get('status_code', 'ошибка'))
+
+        writer.writerow([
+            entry.host,
+            entry.scanned_at.strftime('%d.%m.%Y %H:%M'),
+            score_str,
+            ping_str,
+            ports_str,
+            ssl_str,
+            http_str,
+        ])
+
+    filename = f'nettest_history_{datetime.now().strftime("%Y%m%d")}.csv'
+    return Response(
+        buf.getvalue(),
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+
 
 if __name__ == '__main__':
     app.run(debug=True)

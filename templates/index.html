@@ -53,7 +53,10 @@
         <div class="card" id="history-card">
             <div class="history-header">
                 <div class="card-label" style="margin:0">История</div>
-                <button id="btn-compare" class="btn-compare" style="display:none" onclick="showComparison()">Сравнить</button>
+                <div class="history-actions">
+                    <button class="btn-csv" onclick="exportCSV()" title="Скачать историю в CSV">CSV ↓</button>
+                    <button id="btn-compare" class="btn-compare" style="display:none" onclick="showComparison()">Сравнить</button>
+                </div>
             </div>
             <div id="history"></div>
         </div>
@@ -514,6 +517,10 @@
             document.getElementById('btn').textContent = 'Запустить ↗';
             document.getElementById('btn').disabled = false;
         }
+    }
+
+    function exportCSV() {
+        window.location.href = '/export-csv';
     }
 
     async function exportPDF() {
