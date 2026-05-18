@@ -11,59 +11,59 @@ body {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
+    gap: 18px;
+    padding: 24px;
     min-height: 100vh;
 }
 
 /* САЙДБАР */
 .sidebar {
-    width: 240px;
+    width: 290px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
 }
 
 .logo {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
-    padding: 8px 0;
+    padding: 10px 0;
     color: #fff;
 }
 
 .logo span {
-    font-size: 12px;
+    font-size: 14px;
     color: #555;
     font-weight: 400;
-    margin-left: 6px;
+    margin-left: 8px;
 }
 
 .card {
     background: #1a1d27;
     border: 1px solid #2a2d3a;
     border-radius: 12px;
-    padding: 14px;
+    padding: 20px;
 }
 
 .card-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     color: #555;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 input[type="text"] {
     width: 100%;
-    padding: 9px 12px;
+    padding: 11px 14px;
     background: #0f1117;
     border: 1px solid #2a2d3a;
     border-radius: 8px;
     color: #e0e0e0;
-    font-size: 13px;
-    margin-bottom: 8px;
+    font-size: 15px;
+    margin-bottom: 10px;
     outline: none;
     transition: border 0.2s;
 }
@@ -72,12 +72,12 @@ input[type="text"]:focus { border-color: #4f8ef7; }
 
 button {
     width: 100%;
-    padding: 9px;
+    padding: 11px;
     background: #4f8ef7;
     color: #fff;
     border: none;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 15px;
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -89,9 +89,9 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 0;
+    padding: 9px 0;
     border-bottom: 1px solid #2a2d3a;
-    font-size: 13px;
+    font-size: 15px;
     color: #ccc;
     cursor: pointer;
 }
@@ -103,9 +103,9 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
+    font-size: 14px;
     color: #888;
-    padding: 5px 0;
+    padding: 8px 0;
     border-bottom: 1px solid #2a2d3a;
     cursor: pointer;
     transition: color 0.2s;
@@ -113,12 +113,12 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 
 .hist-item:last-child { border-bottom: none; }
 .hist-item:hover { color: #4f8ef7; }
-.hist-date { font-size: 10px; color: #444; flex-shrink: 0; margin-left: 6px; }
+.hist-date { font-size: 12px; color: #444; flex-shrink: 0; margin-left: 6px; }
 
 .btn-repeat {
     width: auto;
-    padding: 1px 6px;
-    font-size: 13px;
+    padding: 2px 8px;
+    font-size: 14px;
     background: transparent;
     color: #4f8ef7;
     border: 1px solid #2a3a5a;
@@ -130,10 +130,10 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 .btn-repeat:hover { background: #1a2a4a; }
 
 .scan-info {
-    font-size: 11px;
+    font-size: 13px;
     color: #555;
-    margin-bottom: 10px;
-    padding: 6px 10px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
     background: #1a1d27;
     border-radius: 6px;
     border-left: 2px solid #4f8ef7;
@@ -144,29 +144,29 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
     min-width: 320px;
 }
 
 .metrics {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 14px;
 }
 
 .score-banner {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
+    gap: 20px;
+    padding: 16px 20px;
     border-radius: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     background: #1a1d27;
     border: 1px solid #2a2d3a;
 }
 
 .score-banner-val {
-    font-size: 36px;
+    font-size: 44px;
     font-weight: 700;
     line-height: 1;
     flex-shrink: 0;
@@ -177,18 +177,18 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 }
 
 .score-banner-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     color: #555;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .score-bar-bg {
-    height: 6px;
+    height: 8px;
     background: #2a2d3a;
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
 }
 
@@ -202,17 +202,21 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     background: #1a1d27;
     border: 1px solid #2a2d3a;
     border-radius: 12px;
-    padding: 14px;
+    padding: 20px;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .metric-label {
-    font-size: 11px;
+    font-size: 13px;
     color: #555;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .metric-val {
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 500;
     color: #fff;
 }
@@ -223,13 +227,13 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .btn-export {
     width: auto;
-    padding: 6px 14px;
-    font-size: 12px;
+    padding: 8px 18px;
+    font-size: 14px;
     background: #2a2d3a;
 }
 
@@ -237,27 +241,27 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 
 .placeholder {
     color: #444;
-    font-size: 14px;
+    font-size: 16px;
     text-align: center;
-    padding: 2rem 0;
+    padding: 2.5rem 0;
 }
 
 .section-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     color: #555;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin: 14px 0 6px;
+    margin: 18px 0 8px;
 }
 
 .result-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 12px;
+    padding: 11px 16px;
     border-radius: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .result-row.ok  { background: #1a2e1e; }
@@ -265,8 +269,8 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 .result-row.err  { background: #2e1a1a; }
 
 .dot {
-    width: 7px;
-    height: 7px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -277,12 +281,12 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 
 .row-label {
     flex: 1;
-    font-size: 13px;
+    font-size: 15px;
     color: #ccc;
 }
 
 .row-val {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
 }
 
@@ -296,12 +300,12 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 .log {
     background: #0f1117;
     border-radius: 8px;
-    padding: 10px;
+    padding: 14px;
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 13px;
     color: #666;
     line-height: 1.8;
-    max-height: 120px;
+    max-height: 160px;
     overflow-y: auto;
 }
 
@@ -317,8 +321,8 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 
 .btn-compare {
     width: auto;
-    padding: 3px 10px;
-    font-size: 11px;
+    padding: 5px 14px;
+    font-size: 13px;
     background: #4f8ef7;
     border-radius: 6px;
 }
@@ -348,8 +352,8 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     background: #1a1d27;
     border: 1px solid #2a2d3a;
     border-radius: 14px;
-    padding: 20px;
-    max-width: 720px;
+    padding: 28px;
+    max-width: 780px;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
@@ -359,15 +363,15 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .btn-close-compare {
     width: auto;
-    padding: 2px 10px;
+    padding: 4px 12px;
     background: #2a2d3a;
     color: #aaa;
-    font-size: 16px;
+    font-size: 18px;
     border-radius: 6px;
 }
 .btn-close-compare:hover { background: #3a3d4a; color: #fff; }
@@ -376,13 +380,13 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 .cmp-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 .cmp-table th {
     text-align: left;
-    padding: 8px 12px;
-    font-size: 11px;
+    padding: 10px 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #555;
     text-transform: uppercase;
@@ -392,7 +396,7 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 
 .cmp-table th small {
     display: block;
-    font-size: 10px;
+    font-size: 12px;
     color: #444;
     text-transform: none;
     letter-spacing: 0;
@@ -401,7 +405,7 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 }
 
 .cmp-table td {
-    padding: 9px 12px;
+    padding: 11px 14px;
     border-bottom: 1px solid #1e2130;
     color: #ccc;
     vertical-align: middle;
@@ -411,7 +415,7 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 
 .cmp-label {
     color: #666 !important;
-    font-size: 12px !important;
+    font-size: 14px !important;
     white-space: nowrap;
     width: 36%;
 }
@@ -428,21 +432,21 @@ button:disabled { background: #2a3a5a; cursor: not-allowed; }
 }
 
 /* RESPONSIVE */
-@media (max-width: 900px) {
-    .sidebar { width: 220px; }
-    .metric-val { font-size: 18px; }
-    .score-banner-val { font-size: 28px; }
+@media (max-width: 1000px) {
+    .sidebar { width: 260px; }
+    .metric-val { font-size: 22px; }
+    .score-banner-val { font-size: 36px; }
 }
 
 @media (max-width: 599px) {
-    .layout { padding: 10px; gap: 8px; }
+    .layout { padding: 12px; gap: 10px; }
     .sidebar { width: 100%; }
     .main { min-width: 0; }
-    .metric-val { font-size: 16px; }
-    .metric-label { font-size: 10px; }
-    .metric-card { padding: 10px; }
-    .score-banner { gap: 10px; padding: 10px 12px; }
-    .score-banner-val { font-size: 24px; }
-    .card { padding: 12px; }
-    .result-row { padding: 7px 10px; }
+    .metric-val { font-size: 18px; }
+    .metric-label { font-size: 11px; }
+    .metric-card { padding: 14px; min-height: 70px; }
+    .score-banner { gap: 12px; padding: 12px 14px; }
+    .score-banner-val { font-size: 28px; }
+    .card { padding: 14px; }
+    .result-row { padding: 9px 12px; }
 }
